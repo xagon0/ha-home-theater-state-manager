@@ -60,6 +60,21 @@
           "screen_travel_time": "Screen travel time"
         }
       },
+      "projector_device": {
+        "title": "Select Projector Device",
+        "description": "Choose the IR device for your projector.",
+        "data": {
+          "projector_device_id": "Projector device"
+        }
+      },
+      "projector_commands": {
+        "title": "Projector Commands",
+        "description": "Map projector power functions to IR commands.",
+        "data": {
+          "projector_power_on_cmd": "Power on command",
+          "projector_power_off_cmd": "Power off command"
+        }
+      },
       "lights": {
         "title": "Theater Lights",
         "description": "Select the light entities in your theater.",
@@ -141,6 +156,21 @@
           "screen_up_cmd": "Screen up command",
           "screen_stop_cmd": "Screen stop command (optional)",
           "screen_travel_time": "Screen travel time"
+        }
+      },
+      "projector_device": {
+        "title": "Select Projector Device",
+        "description": "Choose the IR device for your projector.",
+        "data": {
+          "projector_device_id": "Projector device"
+        }
+      },
+      "projector_commands": {
+        "title": "Projector Commands",
+        "description": "Map projector power functions to IR commands.",
+        "data": {
+          "projector_power_on_cmd": "Power on command",
+          "projector_power_off_cmd": "Power off command"
         }
       },
       "lights": {

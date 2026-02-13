@@ -19,7 +19,7 @@ from .coordinator import HomeTheaterCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["media_player", "cover"]
+PLATFORMS = ["media_player", "cover", "switch"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

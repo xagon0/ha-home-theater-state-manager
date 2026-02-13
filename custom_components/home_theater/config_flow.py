@@ -33,6 +33,9 @@ from .const import (
     CONF_AMP_VOLUME_UP,
     CONF_HDMI_DEVICE_ID,
     CONF_LIGHT_ENTITIES,
+    CONF_PROJECTOR_DEVICE_ID,
+    CONF_PROJECTOR_POWER_OFF,
+    CONF_PROJECTOR_POWER_ON,
     CONF_SCENES,
     CONF_SCREEN_DEVICE_ID,
     CONF_SCREEN_DOWN_CMD,
@@ -191,6 +194,23 @@ def _screen_commands_schema(
     )
 
 
+def _projector_commands_schema(
+    hass: HomeAssistant, device_id: str, defaults: dict[str, Any] | None = None
+) -> vol.Schema:
+    d = defaults or {}
+    cmd_sel = _command_selector(hass, device_id)
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_PROJECTOR_POWER_ON, default=d.get(CONF_PROJECTOR_POWER_ON, "")
+            ): cmd_sel,
+            vol.Required(
+                CONF_PROJECTOR_POWER_OFF, default=d.get(CONF_PROJECTOR_POWER_OFF, "")
+            ): cmd_sel,
+        }
+    )
+
+
 def _lights_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
     d = defaults or {}
     return vol.Schema(
@@ -322,7 +342,7 @@ class HomeTheaterConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_lights()
+            return await self.async_step_projector_device()
 
         return self.async_show_form(
             step_id="screen_commands",
@@ -331,7 +351,35 @@ class HomeTheaterConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    # Step 7: Light entity selection
+    # Step 7: Pick projector device
+    async def async_step_projector_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data[CONF_PROJECTOR_DEVICE_ID] = user_input[CONF_PROJECTOR_DEVICE_ID]
+            return await self.async_step_projector_commands()
+
+        return self.async_show_form(
+            step_id="projector_device",
+            data_schema=_device_pick_schema(self.hass, CONF_PROJECTOR_DEVICE_ID),
+        )
+
+    # Step 8: Pick projector commands
+    async def async_step_projector_commands(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_lights()
+
+        return self.async_show_form(
+            step_id="projector_commands",
+            data_schema=_projector_commands_schema(
+                self.hass, self._data[CONF_PROJECTOR_DEVICE_ID]
+            ),
+        )
+
+    # Step 9: Light entity selection
     async def async_step_lights(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -472,7 +520,7 @@ class HomeTheaterOptionsFlow(OptionsFlow):
     ) -> FlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_lights()
+            return await self.async_step_projector_device()
 
         return self.async_show_form(
             step_id="screen_commands",
@@ -481,7 +529,38 @@ class HomeTheaterOptionsFlow(OptionsFlow):
             ),
         )
 
-    # Step 7: Lights
+    # Step 7: Projector device
+    async def async_step_projector_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data[CONF_PROJECTOR_DEVICE_ID] = user_input[CONF_PROJECTOR_DEVICE_ID]
+            return await self.async_step_projector_commands()
+
+        return self.async_show_form(
+            step_id="projector_device",
+            data_schema=_device_pick_schema(
+                self.hass, CONF_PROJECTOR_DEVICE_ID,
+                default=self._data.get(CONF_PROJECTOR_DEVICE_ID, ""),
+            ),
+        )
+
+    # Step 8: Projector commands
+    async def async_step_projector_commands(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_lights()
+
+        return self.async_show_form(
+            step_id="projector_commands",
+            data_schema=_projector_commands_schema(
+                self.hass, self._data[CONF_PROJECTOR_DEVICE_ID], self._data
+            ),
+        )
+
+    # Step 9: Lights
     async def async_step_lights(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:

@@ -37,6 +37,11 @@ CONF_VOLUME_MAX_STEPS = "volume_max_steps"
 CONF_HDMI_DEVICE_ID = "hdmi_switch_device_id"
 CONF_SOURCES = "sources"
 
+# Config keys - Projector
+CONF_PROJECTOR_DEVICE_ID = "projector_device_id"
+CONF_PROJECTOR_POWER_ON = "projector_power_on_cmd"
+CONF_PROJECTOR_POWER_OFF = "projector_power_off_cmd"
+
 # Config keys - Projector Screen
 CONF_SCREEN_DEVICE_ID = "screen_device_id"
 CONF_SCREEN_DOWN_CMD = "screen_down_cmd"
@@ -52,6 +57,7 @@ CONF_SCENES = "scenes"
 
 # Scene keys
 SCENE_AMP_POWER = "amp_power"
+SCENE_PROJECTOR_POWER = "projector_power"
 SCENE_VOLUME = "volume"
 SCENE_SOURCE = "source"
 SCENE_SCREEN = "screen"

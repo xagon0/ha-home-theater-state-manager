@@ -25,6 +25,9 @@ from .const import (
     CONF_AMP_VOLUME_UP,
     CONF_HDMI_DEVICE_ID,
     CONF_LIGHT_ENTITIES,
+    CONF_PROJECTOR_DEVICE_ID,
+    CONF_PROJECTOR_POWER_OFF,
+    CONF_PROJECTOR_POWER_ON,
     CONF_SCENES,
     CONF_SCREEN_DEVICE_ID,
     CONF_SCREEN_DOWN_CMD,
@@ -39,6 +42,7 @@ from .const import (
     SAVE_DELAY,
     SCENE_AMP_POWER,
     SCENE_LIGHTS,
+    SCENE_PROJECTOR_POWER,
     SCENE_SCREEN,
     SCENE_SOURCE,
     SCENE_VOLUME,
@@ -66,6 +70,7 @@ class HomeTheaterCoordinator:
 
         # State
         self.amp_power: bool = False
+        self.projector_power: bool = False
         self.volume: float = DEFAULT_VOLUME
         self.muted: bool = False
         self.source: str | None = None
@@ -106,6 +111,7 @@ class HomeTheaterCoordinator:
         data = await self._store.async_load()
         if data:
             self.amp_power = data.get("amp_power", False)
+            self.projector_power = data.get("projector_power", False)
             self.volume = data.get("volume", DEFAULT_VOLUME)
             self.muted = data.get("muted", False)
             self.source = data.get("source")
@@ -123,6 +129,7 @@ class HomeTheaterCoordinator:
     def _state_to_dict(self) -> dict[str, Any]:
         return {
             "amp_power": self.amp_power,
+            "projector_power": self.projector_power,
             "volume": self.volume,
             "muted": self.muted,
             "source": self.source,
@@ -181,7 +188,32 @@ class HomeTheaterCoordinator:
             self._config[CONF_AMP_POWER_OFF],
         )
         self.amp_power = False
-        self.active_scene = None
+        if not self._in_scene_activation:
+            self.active_scene = None
+        self._notify()
+
+    # ── Projector commands ────────────────────────────────────────────
+
+    async def async_projector_power_on(self) -> None:
+        if self.projector_power:
+            return
+        await self._send_command(
+            self._config[CONF_PROJECTOR_DEVICE_ID],
+            self._config[CONF_PROJECTOR_POWER_ON],
+        )
+        self.projector_power = True
+        self._notify()
+
+    async def async_projector_power_off(self) -> None:
+        if not self.projector_power:
+            return
+        await self._send_command(
+            self._config[CONF_PROJECTOR_DEVICE_ID],
+            self._config[CONF_PROJECTOR_POWER_OFF],
+        )
+        self.projector_power = False
+        if not self._in_scene_activation:
+            self.active_scene = None
         self._notify()
 
     async def async_volume_up(self) -> None:
@@ -361,6 +393,13 @@ class HomeTheaterCoordinator:
                 await asyncio.sleep(AMP_POWER_ON_DELAY)
             else:
                 await self.async_amp_power_off()
+
+        # 1b. Projector power
+        if SCENE_PROJECTOR_POWER in scene:
+            if scene[SCENE_PROJECTOR_POWER]:
+                await self.async_projector_power_on()
+            else:
+                await self.async_projector_power_off()
 
         # 2. Source selection
         if SCENE_SOURCE in scene and scene[SCENE_SOURCE]:
