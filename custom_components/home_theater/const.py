@@ -41,6 +41,7 @@ CONF_SOURCES = "sources"
 CONF_SCREEN_DEVICE_ID = "screen_device_id"
 CONF_SCREEN_DOWN_CMD = "screen_down_cmd"
 CONF_SCREEN_UP_CMD = "screen_up_cmd"
+CONF_SCREEN_STOP_CMD = "screen_stop_cmd"
 CONF_SCREEN_TRAVEL_TIME = "screen_travel_time"
 
 # Config keys - Lights

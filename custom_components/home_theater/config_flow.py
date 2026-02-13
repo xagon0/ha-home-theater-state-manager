@@ -36,6 +36,7 @@ from .const import (
     CONF_SCENES,
     CONF_SCREEN_DEVICE_ID,
     CONF_SCREEN_DOWN_CMD,
+    CONF_SCREEN_STOP_CMD,
     CONF_SCREEN_TRAVEL_TIME,
     CONF_SCREEN_UP_CMD,
     CONF_SOURCES,
@@ -137,7 +138,7 @@ def _amp_commands_schema(
                 default=d.get(CONF_VOLUME_MAX_STEPS, DEFAULT_VOLUME_MAX_STEPS),
             ): NumberSelector(
                 NumberSelectorConfig(
-                    min=10, max=200, step=1, mode=NumberSelectorMode.BOX
+                    min=10, max=200, step=1, mode=NumberSelectorMode.SLIDER
                 )
             ),
         }
@@ -174,6 +175,9 @@ def _screen_commands_schema(
             vol.Required(
                 CONF_SCREEN_UP_CMD, default=d.get(CONF_SCREEN_UP_CMD, "")
             ): cmd_sel,
+            vol.Optional(
+                CONF_SCREEN_STOP_CMD, default=d.get(CONF_SCREEN_STOP_CMD, "")
+            ): cmd_sel,
             vol.Required(
                 CONF_SCREEN_TRAVEL_TIME,
                 default=d.get(CONF_SCREEN_TRAVEL_TIME, DEFAULT_SCREEN_TRAVEL_TIME),
@@ -195,7 +199,7 @@ def _lights_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 CONF_LIGHT_ENTITIES,
                 default=d.get(CONF_LIGHT_ENTITIES, []),
             ): EntitySelector(
-                EntitySelectorConfig(domain="light", multiple=True)
+                EntitySelectorConfig(domain=["light", "switch"], multiple=True)
             ),
         }
     )

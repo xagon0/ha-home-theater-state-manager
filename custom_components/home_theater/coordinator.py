@@ -28,6 +28,7 @@ from .const import (
     CONF_SCENES,
     CONF_SCREEN_DEVICE_ID,
     CONF_SCREEN_DOWN_CMD,
+    CONF_SCREEN_STOP_CMD,
     CONF_SCREEN_TRAVEL_TIME,
     CONF_SCREEN_UP_CMD,
     CONF_SOURCES,
@@ -275,6 +276,24 @@ class HomeTheaterCoordinator:
         self.screen_position = SCREEN_UP
         self._notify()
 
+    @property
+    def has_screen_stop(self) -> bool:
+        """Return True if a screen stop command is configured."""
+        return bool(self._config.get(CONF_SCREEN_STOP_CMD))
+
+    async def async_screen_stop(self) -> None:
+        """Stop the screen mid-travel."""
+        stop_cmd = self._config.get(CONF_SCREEN_STOP_CMD)
+        if not stop_cmd:
+            return
+        self._cancel_screen_timer()
+        await self._send_command(
+            self._config[CONF_SCREEN_DEVICE_ID], stop_cmd
+        )
+        # Leave position as the transitional state — we don't know where it stopped
+        # but clear the timer so it won't auto-complete
+        self._notify()
+
     def _cancel_screen_timer(self) -> None:
         if self._screen_timer is not None:
             self._screen_timer()
@@ -358,25 +377,28 @@ class HomeTheaterCoordinator:
             elif scene[SCENE_SCREEN] == SCREEN_UP:
                 await self.async_screen_up()
 
-        # 5. Lights
+        # 5. Lights and switches
         if SCENE_LIGHTS in scene:
             for light_cfg in scene[SCENE_LIGHTS]:
                 entity_id = light_cfg.get("entity_id")
-                if not entity_id or not entity_id.startswith("light."):
+                if not entity_id:
+                    continue
+                domain = entity_id.split(".")[0]
+                if domain not in ("light", "switch"):
                     continue
                 state = light_cfg.get("state", "off")
                 if state == "on":
                     service_data: dict[str, Any] = {"entity_id": entity_id}
-                    if "brightness" in light_cfg:
+                    if domain == "light" and "brightness" in light_cfg:
                         service_data["brightness"] = int(
                             light_cfg["brightness"] * 255 / 100
                         )
                     await self.hass.services.async_call(
-                        "light", "turn_on", service_data, blocking=True
+                        domain, "turn_on", service_data, blocking=True
                     )
                 else:
                     await self.hass.services.async_call(
-                        "light",
+                        domain,
                         "turn_off",
                         {"entity_id": entity_id},
                         blocking=True,

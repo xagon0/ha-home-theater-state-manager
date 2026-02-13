@@ -39,7 +39,6 @@ class HomeTheaterProjectorScreen(CoverEntity):
     _attr_name = "Projector Screen"
     _attr_assumed_state = True
     _attr_device_class = CoverDeviceClass.SHADE
-    _attr_supported_features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
     def __init__(
         self, coordinator: HomeTheaterCoordinator, entry: ConfigEntry
@@ -52,6 +51,10 @@ class HomeTheaterProjectorScreen(CoverEntity):
             manufacturer="Custom",
             model="Home Theater State Manager",
         )
+        features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
+        if coordinator.has_screen_stop:
+            features |= CoverEntityFeature.STOP
+        self._attr_supported_features = features
 
     async def async_added_to_hass(self) -> None:
         """Register as a coordinator listener."""
@@ -90,3 +93,7 @@ class HomeTheaterProjectorScreen(CoverEntity):
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Deploy the screen (close = screen down)."""
         await self._coordinator.async_screen_down()
+
+    async def async_stop_cover(self, **kwargs: Any) -> None:
+        """Stop the screen mid-travel."""
+        await self._coordinator.async_screen_stop()
