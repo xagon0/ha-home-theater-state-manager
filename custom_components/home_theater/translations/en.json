@@ -2,10 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Amplifier IR Configuration",
-        "description": "Configure the IR device and commands for your amplifier.",
+        "title": "Select Amplifier Device",
+        "description": "Choose the IR device for your amplifier from remote_ir_device_manager.",
         "data": {
-          "amp_device_id": "Amplifier device ID",
+          "amp_device_id": "Amplifier device"
+        }
+      },
+      "amp_commands": {
+        "title": "Amplifier Commands",
+        "description": "Map each amplifier function to an IR command and set the volume step size.",
+        "data": {
           "amp_power_on_cmd": "Power on command",
           "amp_power_off_cmd": "Power off command",
           "amp_volume_up_cmd": "Volume up command",
@@ -14,31 +20,43 @@
           "volume_step": "Volume step size (per IR press)"
         }
       },
-      "hdmi": {
-        "title": "HDMI Switch Configuration",
-        "description": "Configure the IR device for your HDMI switch and define input sources. Leave unused source slots empty.",
+      "hdmi_device": {
+        "title": "Select HDMI Switch Device",
+        "description": "Choose the IR device for your HDMI switch.",
         "data": {
-          "hdmi_switch_device_id": "HDMI switch device ID",
-          "source_1_name": "Source 1 name",
-          "source_1_cmd": "Source 1 IR command",
-          "source_2_name": "Source 2 name",
-          "source_2_cmd": "Source 2 IR command",
-          "source_3_name": "Source 3 name",
-          "source_3_cmd": "Source 3 IR command",
-          "source_4_name": "Source 4 name",
-          "source_4_cmd": "Source 4 IR command",
-          "source_5_name": "Source 5 name",
-          "source_5_cmd": "Source 5 IR command"
+          "hdmi_switch_device_id": "HDMI switch device"
         }
       },
-      "screen": {
-        "title": "Projector Screen Configuration",
-        "description": "Configure the RF device and commands for your projector screen.",
+      "hdmi_sources": {
+        "title": "HDMI Sources",
+        "description": "Name each input source and select its IR command. Leave unused slots empty.",
         "data": {
-          "screen_device_id": "Screen device ID",
+          "source_1_name": "Source 1 name",
+          "source_1_cmd": "Source 1 command",
+          "source_2_name": "Source 2 name",
+          "source_2_cmd": "Source 2 command",
+          "source_3_name": "Source 3 name",
+          "source_3_cmd": "Source 3 command",
+          "source_4_name": "Source 4 name",
+          "source_4_cmd": "Source 4 command",
+          "source_5_name": "Source 5 name",
+          "source_5_cmd": "Source 5 command"
+        }
+      },
+      "screen_device": {
+        "title": "Select Projector Screen Device",
+        "description": "Choose the RF device for your projector screen.",
+        "data": {
+          "screen_device_id": "Screen device"
+        }
+      },
+      "screen_commands": {
+        "title": "Screen Commands",
+        "description": "Map screen functions to RF commands and set the travel time.",
+        "data": {
           "screen_down_cmd": "Screen down command",
           "screen_up_cmd": "Screen up command",
-          "screen_travel_time": "Screen travel time (seconds)"
+          "screen_travel_time": "Screen travel time"
         }
       },
       "lights": {
@@ -65,11 +83,17 @@
   },
   "options": {
     "step": {
-      "amp": {
-        "title": "Amplifier IR Configuration",
-        "description": "Reconfigure the IR device and commands for your amplifier.",
+      "init": {
+        "title": "Select Amplifier Device",
+        "description": "Choose the IR device for your amplifier.",
         "data": {
-          "amp_device_id": "Amplifier device ID",
+          "amp_device_id": "Amplifier device"
+        }
+      },
+      "amp_commands": {
+        "title": "Amplifier Commands",
+        "description": "Map each amplifier function to an IR command.",
+        "data": {
           "amp_power_on_cmd": "Power on command",
           "amp_power_off_cmd": "Power off command",
           "amp_volume_up_cmd": "Volume up command",
@@ -78,31 +102,43 @@
           "volume_step": "Volume step size (per IR press)"
         }
       },
-      "hdmi": {
-        "title": "HDMI Switch Configuration",
-        "description": "Reconfigure the HDMI switch sources.",
+      "hdmi_device": {
+        "title": "Select HDMI Switch Device",
+        "description": "Choose the IR device for your HDMI switch.",
         "data": {
-          "hdmi_switch_device_id": "HDMI switch device ID",
-          "source_1_name": "Source 1 name",
-          "source_1_cmd": "Source 1 IR command",
-          "source_2_name": "Source 2 name",
-          "source_2_cmd": "Source 2 IR command",
-          "source_3_name": "Source 3 name",
-          "source_3_cmd": "Source 3 IR command",
-          "source_4_name": "Source 4 name",
-          "source_4_cmd": "Source 4 IR command",
-          "source_5_name": "Source 5 name",
-          "source_5_cmd": "Source 5 IR command"
+          "hdmi_switch_device_id": "HDMI switch device"
         }
       },
-      "screen": {
-        "title": "Projector Screen Configuration",
-        "description": "Reconfigure the projector screen.",
+      "hdmi_sources": {
+        "title": "HDMI Sources",
+        "description": "Name each input source and select its IR command.",
         "data": {
-          "screen_device_id": "Screen device ID",
+          "source_1_name": "Source 1 name",
+          "source_1_cmd": "Source 1 command",
+          "source_2_name": "Source 2 name",
+          "source_2_cmd": "Source 2 command",
+          "source_3_name": "Source 3 name",
+          "source_3_cmd": "Source 3 command",
+          "source_4_name": "Source 4 name",
+          "source_4_cmd": "Source 4 command",
+          "source_5_name": "Source 5 name",
+          "source_5_cmd": "Source 5 command"
+        }
+      },
+      "screen_device": {
+        "title": "Select Projector Screen Device",
+        "description": "Choose the RF device for your projector screen.",
+        "data": {
+          "screen_device_id": "Screen device"
+        }
+      },
+      "screen_commands": {
+        "title": "Screen Commands",
+        "description": "Map screen functions to RF commands.",
+        "data": {
           "screen_down_cmd": "Screen down command",
           "screen_up_cmd": "Screen up command",
-          "screen_travel_time": "Screen travel time (seconds)"
+          "screen_travel_time": "Screen travel time"
         }
       },
       "lights": {

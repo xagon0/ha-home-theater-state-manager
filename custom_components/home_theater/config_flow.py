@@ -8,7 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     EntitySelector,
@@ -16,6 +16,10 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
 )
@@ -44,30 +48,90 @@ from .const import (
 
 TEXT = TextSelector(TextSelectorConfig(type="text"))
 
+IR_DOMAIN = "remote_ir_device_manager"
 
-def _amp_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+
+# ── Helpers to query remote_ir_device_manager ─────────────────────────
+
+
+def _get_ir_devices(hass: HomeAssistant) -> dict[str, str]:
+    """Return {device_id: device_name} for all remote_ir_device_manager devices."""
+    devices: dict[str, str] = {}
+    for entry_data in hass.data.get(IR_DOMAIN, {}).values():
+        coordinator = entry_data.get("coordinator")
+        if coordinator:
+            for device in coordinator.devices.values():
+                devices[device.id] = device.name
+    return devices
+
+
+def _get_device_commands(hass: HomeAssistant, device_id: str) -> list[str]:
+    """Return command names for a specific device."""
+    for entry_data in hass.data.get(IR_DOMAIN, {}).values():
+        coordinator = entry_data.get("coordinator")
+        if coordinator:
+            device = coordinator.get_device(device_id)
+            if device:
+                return list(device.commands.keys())
+    return []
+
+
+def _device_selector(hass: HomeAssistant, default: str = "") -> SelectSelector:
+    """Build a dropdown selector of all IR/RF devices."""
+    devices = _get_ir_devices(hass)
+    options = [
+        SelectOptionDict(value=did, label=name) for did, name in devices.items()
+    ]
+    return SelectSelector(
+        SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN)
+    )
+
+
+def _command_selector(
+    hass: HomeAssistant, device_id: str
+) -> SelectSelector:
+    """Build a dropdown selector of commands for a specific device."""
+    commands = _get_device_commands(hass, device_id)
+    options = [SelectOptionDict(value=cmd, label=cmd) for cmd in commands]
+    return SelectSelector(
+        SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN)
+    )
+
+
+# ── Schema builders ──────────────────────────────────────────────────
+
+
+def _device_pick_schema(
+    hass: HomeAssistant, key: str, default: str = ""
+) -> vol.Schema:
+    """Schema with a single device picker dropdown."""
+    return vol.Schema(
+        {vol.Required(key, default=default): _device_selector(hass, default)}
+    )
+
+
+def _amp_commands_schema(
+    hass: HomeAssistant, device_id: str, defaults: dict[str, Any] | None = None
+) -> vol.Schema:
     d = defaults or {}
+    cmd_sel = _command_selector(hass, device_id)
     return vol.Schema(
         {
             vol.Required(
-                CONF_AMP_DEVICE_ID, default=d.get(CONF_AMP_DEVICE_ID, "")
-            ): TEXT,
+                CONF_AMP_POWER_ON, default=d.get(CONF_AMP_POWER_ON, "")
+            ): cmd_sel,
             vol.Required(
-                CONF_AMP_POWER_ON, default=d.get(CONF_AMP_POWER_ON, "power_on")
-            ): TEXT,
+                CONF_AMP_POWER_OFF, default=d.get(CONF_AMP_POWER_OFF, "")
+            ): cmd_sel,
             vol.Required(
-                CONF_AMP_POWER_OFF, default=d.get(CONF_AMP_POWER_OFF, "power_off")
-            ): TEXT,
+                CONF_AMP_VOLUME_UP, default=d.get(CONF_AMP_VOLUME_UP, "")
+            ): cmd_sel,
             vol.Required(
-                CONF_AMP_VOLUME_UP, default=d.get(CONF_AMP_VOLUME_UP, "volume_up")
-            ): TEXT,
+                CONF_AMP_VOLUME_DOWN, default=d.get(CONF_AMP_VOLUME_DOWN, "")
+            ): cmd_sel,
             vol.Required(
-                CONF_AMP_VOLUME_DOWN,
-                default=d.get(CONF_AMP_VOLUME_DOWN, "volume_down"),
-            ): TEXT,
-            vol.Required(
-                CONF_AMP_MUTE, default=d.get(CONF_AMP_MUTE, "mute")
-            ): TEXT,
+                CONF_AMP_MUTE, default=d.get(CONF_AMP_MUTE, "")
+            ): cmd_sel,
             vol.Required(
                 CONF_VOLUME_STEP,
                 default=d.get(CONF_VOLUME_STEP, DEFAULT_VOLUME_STEP),
@@ -80,50 +144,43 @@ def _amp_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
     )
 
 
-def _hdmi_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+def _hdmi_sources_schema(
+    hass: HomeAssistant, device_id: str, defaults: dict[str, Any] | None = None
+) -> vol.Schema:
     d = defaults or {}
     existing_sources = d.get(CONF_SOURCES, {})
-    fields: dict[vol.Marker, Any] = {
-        vol.Required(
-            CONF_HDMI_DEVICE_ID, default=d.get(CONF_HDMI_DEVICE_ID, "")
-        ): TEXT,
-    }
+    cmd_sel = _command_selector(hass, device_id)
+    fields: dict[vol.Marker, Any] = {}
+    existing_names = list(existing_sources.keys())
+    existing_cmds = list(existing_sources.values())
     for i in range(1, MAX_SOURCES + 1):
-        # Find existing values for this slot
-        source_name_key = f"source_{i}_name"
-        source_cmd_key = f"source_{i}_cmd"
-        # Try to get defaults from existing sources dict
-        existing_names = list(existing_sources.keys())
-        existing_cmds = list(existing_sources.values())
         name_default = existing_names[i - 1] if i - 1 < len(existing_names) else ""
         cmd_default = existing_cmds[i - 1] if i - 1 < len(existing_cmds) else ""
-
-        fields[vol.Optional(source_name_key, default=name_default)] = TEXT
-        fields[vol.Optional(source_cmd_key, default=cmd_default)] = TEXT
-
+        fields[vol.Optional(f"source_{i}_name", default=name_default)] = TEXT
+        fields[vol.Optional(f"source_{i}_cmd", default=cmd_default)] = cmd_sel
     return vol.Schema(fields)
 
 
-def _screen_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+def _screen_commands_schema(
+    hass: HomeAssistant, device_id: str, defaults: dict[str, Any] | None = None
+) -> vol.Schema:
     d = defaults or {}
+    cmd_sel = _command_selector(hass, device_id)
     return vol.Schema(
         {
             vol.Required(
-                CONF_SCREEN_DEVICE_ID, default=d.get(CONF_SCREEN_DEVICE_ID, "")
-            ): TEXT,
+                CONF_SCREEN_DOWN_CMD, default=d.get(CONF_SCREEN_DOWN_CMD, "")
+            ): cmd_sel,
             vol.Required(
-                CONF_SCREEN_DOWN_CMD,
-                default=d.get(CONF_SCREEN_DOWN_CMD, "screen_down"),
-            ): TEXT,
-            vol.Required(
-                CONF_SCREEN_UP_CMD, default=d.get(CONF_SCREEN_UP_CMD, "screen_up")
-            ): TEXT,
+                CONF_SCREEN_UP_CMD, default=d.get(CONF_SCREEN_UP_CMD, "")
+            ): cmd_sel,
             vol.Required(
                 CONF_SCREEN_TRAVEL_TIME,
                 default=d.get(CONF_SCREEN_TRAVEL_TIME, DEFAULT_SCREEN_TRAVEL_TIME),
             ): NumberSelector(
                 NumberSelectorConfig(
-                    min=5, max=60, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="s"
+                    min=5, max=60, step=1, mode=NumberSelectorMode.SLIDER,
+                    unit_of_measurement="s",
                 )
             ),
         }
@@ -145,12 +202,6 @@ def _lights_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
 
 
 def _scenes_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
-    """Scene config as JSON text.
-
-    Each scene is an object with name, amp_power, volume, source, screen, and
-    lights (list of {entity_id, state, brightness}).  Entering these as JSON
-    keeps the config flow manageable while still being fully expressive.
-    """
     d = defaults or {}
     default_scenes = d.get(CONF_SCENES, "[]")
     if isinstance(default_scenes, list):
@@ -178,6 +229,8 @@ def _parse_sources(user_input: dict[str, Any]) -> dict[str, str]:
     return sources
 
 
+# ── Config flow ──────────────────────────────────────────────────────
+
 
 class HomeTheaterConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Home Theater."""
@@ -185,56 +238,99 @@ class HomeTheaterConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self) -> None:
-        """Initialize."""
         self._data: dict[str, Any] = {}
 
+    # Step 1: Pick amplifier device
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 1 - Amplifier IR config."""
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
         if user_input is not None:
-            self._data.update(user_input)
-            return await self.async_step_hdmi()
+            self._data[CONF_AMP_DEVICE_ID] = user_input[CONF_AMP_DEVICE_ID]
+            return await self.async_step_amp_commands()
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_amp_schema(),
+            data_schema=_device_pick_schema(self.hass, CONF_AMP_DEVICE_ID),
         )
 
-    async def async_step_hdmi(
+    # Step 2: Pick amplifier commands + volume step
+    async def async_step_amp_commands(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 2 - HDMI Switch IR config."""
         if user_input is not None:
-            self._data[CONF_HDMI_DEVICE_ID] = user_input[CONF_HDMI_DEVICE_ID]
-            self._data[CONF_SOURCES] = _parse_sources(user_input)
-            return await self.async_step_screen()
+            self._data.update(user_input)
+            return await self.async_step_hdmi_device()
 
         return self.async_show_form(
-            step_id="hdmi",
-            data_schema=_hdmi_schema(),
+            step_id="amp_commands",
+            data_schema=_amp_commands_schema(
+                self.hass, self._data[CONF_AMP_DEVICE_ID]
+            ),
         )
 
-    async def async_step_screen(
+    # Step 3: Pick HDMI switch device
+    async def async_step_hdmi_device(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 3 - Projector Screen RF config."""
+        if user_input is not None:
+            self._data[CONF_HDMI_DEVICE_ID] = user_input[CONF_HDMI_DEVICE_ID]
+            return await self.async_step_hdmi_sources()
+
+        return self.async_show_form(
+            step_id="hdmi_device",
+            data_schema=_device_pick_schema(self.hass, CONF_HDMI_DEVICE_ID),
+        )
+
+    # Step 4: Map HDMI sources to commands
+    async def async_step_hdmi_sources(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data[CONF_SOURCES] = _parse_sources(user_input)
+            return await self.async_step_screen_device()
+
+        return self.async_show_form(
+            step_id="hdmi_sources",
+            data_schema=_hdmi_sources_schema(
+                self.hass, self._data[CONF_HDMI_DEVICE_ID]
+            ),
+        )
+
+    # Step 5: Pick screen device
+    async def async_step_screen_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data[CONF_SCREEN_DEVICE_ID] = user_input[CONF_SCREEN_DEVICE_ID]
+            return await self.async_step_screen_commands()
+
+        return self.async_show_form(
+            step_id="screen_device",
+            data_schema=_device_pick_schema(self.hass, CONF_SCREEN_DEVICE_ID),
+        )
+
+    # Step 6: Pick screen commands + travel time
+    async def async_step_screen_commands(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_lights()
 
         return self.async_show_form(
-            step_id="screen",
-            data_schema=_screen_schema(),
+            step_id="screen_commands",
+            data_schema=_screen_commands_schema(
+                self.hass, self._data[CONF_SCREEN_DEVICE_ID]
+            ),
         )
 
+    # Step 7: Light entity selection
     async def async_step_lights(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 4 - Light entity selection."""
         if user_input is not None:
             self._data[CONF_LIGHT_ENTITIES] = user_input.get(
                 CONF_LIGHT_ENTITIES, []
@@ -246,10 +342,10 @@ class HomeTheaterConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=_lights_schema(),
         )
 
+    # Step 8: Scene definitions
     async def async_step_scenes(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Step 5 - Scene definitions."""
         errors: dict[str, str] = {}
         if user_input is not None:
             raw = user_input.get(CONF_SCENES, "[]")
@@ -275,68 +371,116 @@ class HomeTheaterConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        """Get the options flow handler."""
         return HomeTheaterOptionsFlow(config_entry)
+
+
+# ── Options flow ─────────────────────────────────────────────────────
 
 
 class HomeTheaterOptionsFlow(OptionsFlow):
     """Handle options flow for reconfiguration."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize."""
         self._config_entry = config_entry
         self._data: dict[str, Any] = dict(config_entry.data)
 
+    # Step 1: Amp device
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Start options flow at amplifier step."""
-        return await self.async_step_amp(user_input)
+        if user_input is not None:
+            self._data[CONF_AMP_DEVICE_ID] = user_input[CONF_AMP_DEVICE_ID]
+            return await self.async_step_amp_commands()
 
-    async def async_step_amp(
+        return self.async_show_form(
+            step_id="init",
+            data_schema=_device_pick_schema(
+                self.hass, CONF_AMP_DEVICE_ID,
+                default=self._data.get(CONF_AMP_DEVICE_ID, ""),
+            ),
+        )
+
+    # Step 2: Amp commands
+    async def async_step_amp_commands(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Options Step 1 - Amplifier IR config."""
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_hdmi()
+            return await self.async_step_hdmi_device()
 
         return self.async_show_form(
-            step_id="amp",
-            data_schema=_amp_schema(self._data),
+            step_id="amp_commands",
+            data_schema=_amp_commands_schema(
+                self.hass, self._data[CONF_AMP_DEVICE_ID], self._data
+            ),
         )
 
-    async def async_step_hdmi(
+    # Step 3: HDMI device
+    async def async_step_hdmi_device(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Options Step 2 - HDMI Switch IR config."""
         if user_input is not None:
             self._data[CONF_HDMI_DEVICE_ID] = user_input[CONF_HDMI_DEVICE_ID]
-            self._data[CONF_SOURCES] = _parse_sources(user_input)
-            return await self.async_step_screen()
+            return await self.async_step_hdmi_sources()
 
         return self.async_show_form(
-            step_id="hdmi",
-            data_schema=_hdmi_schema(self._data),
+            step_id="hdmi_device",
+            data_schema=_device_pick_schema(
+                self.hass, CONF_HDMI_DEVICE_ID,
+                default=self._data.get(CONF_HDMI_DEVICE_ID, ""),
+            ),
         )
 
-    async def async_step_screen(
+    # Step 4: HDMI sources
+    async def async_step_hdmi_sources(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Options Step 3 - Projector Screen RF config."""
+        if user_input is not None:
+            self._data[CONF_SOURCES] = _parse_sources(user_input)
+            return await self.async_step_screen_device()
+
+        return self.async_show_form(
+            step_id="hdmi_sources",
+            data_schema=_hdmi_sources_schema(
+                self.hass, self._data[CONF_HDMI_DEVICE_ID], self._data
+            ),
+        )
+
+    # Step 5: Screen device
+    async def async_step_screen_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            self._data[CONF_SCREEN_DEVICE_ID] = user_input[CONF_SCREEN_DEVICE_ID]
+            return await self.async_step_screen_commands()
+
+        return self.async_show_form(
+            step_id="screen_device",
+            data_schema=_device_pick_schema(
+                self.hass, CONF_SCREEN_DEVICE_ID,
+                default=self._data.get(CONF_SCREEN_DEVICE_ID, ""),
+            ),
+        )
+
+    # Step 6: Screen commands
+    async def async_step_screen_commands(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_lights()
 
         return self.async_show_form(
-            step_id="screen",
-            data_schema=_screen_schema(self._data),
+            step_id="screen_commands",
+            data_schema=_screen_commands_schema(
+                self.hass, self._data[CONF_SCREEN_DEVICE_ID], self._data
+            ),
         )
 
+    # Step 7: Lights
     async def async_step_lights(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Options Step 4 - Light entity selection."""
         if user_input is not None:
             self._data[CONF_LIGHT_ENTITIES] = user_input.get(
                 CONF_LIGHT_ENTITIES, []
@@ -348,10 +492,10 @@ class HomeTheaterOptionsFlow(OptionsFlow):
             data_schema=_lights_schema(self._data),
         )
 
+    # Step 8: Scenes
     async def async_step_scenes(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Options Step 5 - Scene definitions."""
         errors: dict[str, str] = {}
         if user_input is not None:
             raw = user_input.get(CONF_SCENES, "[]")
