@@ -1,0 +1,10 @@
+{
+  "domain": "home_theater",
+  "name": "Home Theater State Manager",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["remote_ir_device_manager"],
+  "documentation": "",
+  "iot_class": "assumed_state",
+  "version": "1.0.0"
+}

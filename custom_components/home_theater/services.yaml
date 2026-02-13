@@ -1,0 +1,43 @@
+activate_scene:
+  name: Activate Scene
+  description: Activate a predefined home theater scene. Orchestrates amplifier power, volume, source, screen, and lights.
+  fields:
+    scene_name:
+      name: Scene Name
+      description: The name of the scene to activate (as defined in the integration configuration).
+      required: true
+      example: "Movie"
+      selector:
+        text:
+
+sync_volume:
+  name: Sync Volume
+  description: Manually set the tracked volume level without sending any IR commands. Use this to correct volume drift.
+  fields:
+    volume_level:
+      name: Volume Level
+      description: The volume level to set (0.0 to 1.0).
+      required: true
+      example: 0.3
+      selector:
+        number:
+          min: 0.0
+          max: 1.0
+          step: 0.01
+          mode: slider
+
+volume_set_level:
+  name: Set Volume Level
+  description: Step the amplifier volume to an absolute level by sending repeated IR volume up/down commands.
+  fields:
+    volume_level:
+      name: Volume Level
+      description: The target volume level (0.0 to 1.0).
+      required: true
+      example: 0.3
+      selector:
+        number:
+          min: 0.0
+          max: 1.0
+          step: 0.01
+          mode: slider
