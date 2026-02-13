@@ -7,7 +7,7 @@ STORAGE_KEY = "home_theater_state"
 STORAGE_VERSION = 1
 
 # Volume defaults
-DEFAULT_VOLUME_STEP = 0.02
+DEFAULT_VOLUME_MAX_STEPS = 50
 VOLUME_MIN = 0.0
 VOLUME_MAX = 1.0
 DEFAULT_VOLUME = 0.3
@@ -31,7 +31,7 @@ CONF_AMP_POWER_OFF = "amp_power_off_cmd"
 CONF_AMP_VOLUME_UP = "amp_volume_up_cmd"
 CONF_AMP_VOLUME_DOWN = "amp_volume_down_cmd"
 CONF_AMP_MUTE = "amp_mute_cmd"
-CONF_VOLUME_STEP = "volume_step"
+CONF_VOLUME_MAX_STEPS = "volume_max_steps"
 
 # Config keys - HDMI Switch
 CONF_HDMI_DEVICE_ID = "hdmi_switch_device_id"

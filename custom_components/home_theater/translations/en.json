@@ -17,7 +17,7 @@
           "amp_volume_up_cmd": "Volume up command",
           "amp_volume_down_cmd": "Volume down command",
           "amp_mute_cmd": "Mute command",
-          "volume_step": "Volume step size (per IR press)"
+          "volume_max_steps": "Total volume steps (e.g. 70)"
         }
       },
       "hdmi_device": {
@@ -99,7 +99,7 @@
           "amp_volume_up_cmd": "Volume up command",
           "amp_volume_down_cmd": "Volume down command",
           "amp_mute_cmd": "Mute command",
-          "volume_step": "Volume step size (per IR press)"
+          "volume_max_steps": "Total volume steps (e.g. 70)"
         }
       },
       "hdmi_device": {

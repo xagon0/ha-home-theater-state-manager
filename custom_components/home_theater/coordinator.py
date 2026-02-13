@@ -31,10 +31,10 @@ from .const import (
     CONF_SCREEN_TRAVEL_TIME,
     CONF_SCREEN_UP_CMD,
     CONF_SOURCES,
-    CONF_VOLUME_STEP,
+    CONF_VOLUME_MAX_STEPS,
     DEFAULT_SCREEN_TRAVEL_TIME,
     DEFAULT_VOLUME,
-    DEFAULT_VOLUME_STEP,
+    DEFAULT_VOLUME_MAX_STEPS,
     SAVE_DELAY,
     SCENE_AMP_POWER,
     SCENE_LIGHTS,
@@ -188,7 +188,8 @@ class HomeTheaterCoordinator:
             self._config[CONF_AMP_DEVICE_ID],
             self._config[CONF_AMP_VOLUME_UP],
         )
-        step = self._config.get(CONF_VOLUME_STEP, DEFAULT_VOLUME_STEP)
+        max_steps = self._config.get(CONF_VOLUME_MAX_STEPS, DEFAULT_VOLUME_MAX_STEPS)
+        step = 1.0 / max_steps
         self.volume = min(VOLUME_MAX, round(self.volume + step, 4))
         if not self._in_scene_activation:
             self.active_scene = None
@@ -199,7 +200,8 @@ class HomeTheaterCoordinator:
             self._config[CONF_AMP_DEVICE_ID],
             self._config[CONF_AMP_VOLUME_DOWN],
         )
-        step = self._config.get(CONF_VOLUME_STEP, DEFAULT_VOLUME_STEP)
+        max_steps = self._config.get(CONF_VOLUME_MAX_STEPS, DEFAULT_VOLUME_MAX_STEPS)
+        step = 1.0 / max_steps
         self.volume = max(VOLUME_MIN, round(self.volume - step, 4))
         if not self._in_scene_activation:
             self.active_scene = None
@@ -291,7 +293,8 @@ class HomeTheaterCoordinator:
     async def async_volume_set_level(self, target: float) -> None:
         """Step volume to an absolute level via repeated IR commands."""
         target = max(VOLUME_MIN, min(VOLUME_MAX, round(target, 4)))
-        step = self._config.get(CONF_VOLUME_STEP, DEFAULT_VOLUME_STEP)
+        max_steps = self._config.get(CONF_VOLUME_MAX_STEPS, DEFAULT_VOLUME_MAX_STEPS)
+        step = 1.0 / max_steps
         diff = target - self.volume
         steps_needed = int(abs(diff) / step)
 

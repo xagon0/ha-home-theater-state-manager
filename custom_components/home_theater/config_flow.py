@@ -39,9 +39,9 @@ from .const import (
     CONF_SCREEN_TRAVEL_TIME,
     CONF_SCREEN_UP_CMD,
     CONF_SOURCES,
-    CONF_VOLUME_STEP,
+    CONF_VOLUME_MAX_STEPS,
     DEFAULT_SCREEN_TRAVEL_TIME,
-    DEFAULT_VOLUME_STEP,
+    DEFAULT_VOLUME_MAX_STEPS,
     DOMAIN,
     MAX_SOURCES,
 )
@@ -133,11 +133,11 @@ def _amp_commands_schema(
                 CONF_AMP_MUTE, default=d.get(CONF_AMP_MUTE, "")
             ): cmd_sel,
             vol.Required(
-                CONF_VOLUME_STEP,
-                default=d.get(CONF_VOLUME_STEP, DEFAULT_VOLUME_STEP),
+                CONF_VOLUME_MAX_STEPS,
+                default=d.get(CONF_VOLUME_MAX_STEPS, DEFAULT_VOLUME_MAX_STEPS),
             ): NumberSelector(
                 NumberSelectorConfig(
-                    min=0.01, max=0.10, step=0.01, mode=NumberSelectorMode.SLIDER
+                    min=10, max=200, step=1, mode=NumberSelectorMode.BOX
                 )
             ),
         }
